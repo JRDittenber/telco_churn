@@ -66,7 +66,8 @@ This project is a comprehensive end-to-end data science solution for predicting 
 ### Prerequisites
 - Python 3.8+
 - Docker
-- Apache Airflow/Prefect
+- GitHub Actions
+- MongoDB account (for simulating data ingestion)
 - AWS account (optional for cloud deployment)
 
 ### Steps to Run Locally
