@@ -1,5 +1,6 @@
 # Customer Churn Prediction: End-to-End Data Science Project
 
+data_set: https://www.kaggle.com/datasets/blastchar/telco-customer-churn
 ## Overview
 This project is a comprehensive end-to-end data science solution for predicting customer churn in a subscription-based business. It includes data pipeline creation, model training, deployment, and real-time predictions, simulating an industry-standard workflow.
 
