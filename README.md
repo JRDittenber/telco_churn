@@ -1,17 +1,19 @@
 # Customer Churn Prediction: End-to-End Data Science Project
 
+data_set: https://www.kaggle.com/datasets/blastchar/telco-customer-churn
 ## Overview
 This project is a comprehensive end-to-end data science solution for predicting customer churn in a subscription-based business. It includes data pipeline creation, model training, deployment, and real-time predictions, simulating an industry-standard workflow.
 
 ## Project Architecture
 1. **Data Collection & Pipeline**:
    - **External Data Source**: Simulated data collection using web scraping/APIs.
-   - **ETL Process**: Data extracted, cleaned, and stored using Python scripts and managed with Apache Airflow.
-   - **Storage**: Data stored in a SQL database/AWS S3 bucket for persistence.
+   - **ETL Process**: Data extracted, cleaned, and stored using Python scripts.
+   - **Storage**: Data stored in a MongoDB database/AWS S3 bucket for persistence.
 
 2. **Exploratory Data Analysis (EDA)**:
    - Visualization of data distributions and correlations.
    - Identification of key features influencing churn.
+   - Dimension reduction 
 
 3. **Model Development**:
    - Initial model selection (Logistic Regression, Decision Trees).
@@ -21,8 +23,10 @@ This project is a comprehensive end-to-end data science solution for predicting 
 
 4. **Deployment**:
    - **Model API**: Built with Flask/FastAPI for serving real-time predictions.
+   - **CI/CD Pipeline**: Automated deployment using GitHub Actions, ensuring seamless integration and delivery.
    - **Containerization**: Docker used to ensure consistent deployment.
    - **Cloud Deployment**: Hosted on AWS EC2 for scalable access.
+     
 
 5. **Monitoring**:
    - Real-time model performance tracking with Prometheus and Grafana.
@@ -30,16 +34,16 @@ This project is a comprehensive end-to-end data science solution for predicting 
 
 ## Tools and Technologies
 - **Languages**: Python, SQL
-- **Libraries**: `pandas`, `numpy`, `scikit-learn`, `xgboost`, `matplotlib`, `seaborn`, `shap`
-- **ETL and Orchestration**: Apache Airflow/Prefect
+- **Libraries**: see requirements.txt
+- **CI/CD Pipeline**: Github Actions
 - **Deployment**: Flask/FastAPI, Docker, AWS (EC2, S3)
 - **Visualization**: Streamlit (optional interactive dashboard)
-- **Monitoring**: Prometheus, Grafana
+- **Monitoring**: Evidently
 
 ## Project Workflow
 ### 1. Data Collection
 - **Script**: Python scripts extract data from an API or web source.
-- **Automation**: Scheduled with Apache Airflow for daily data ingestion.
+- **Automation**: Scheduled with Apache Airflow for daily data ingestion (optional). 
 - **ETL Steps**: Data cleaned, transformed, and stored in SQL/AWS S3.
 
 ### 2. EDA and Feature Engineering
@@ -66,7 +70,8 @@ This project is a comprehensive end-to-end data science solution for predicting 
 ### Prerequisites
 - Python 3.8+
 - Docker
-- Apache Airflow/Prefect
+- GitHub Actions
+- MongoDB account (for simulating data ingestion)
 - AWS account (optional for cloud deployment)
 
 ### Steps to Run Locally
