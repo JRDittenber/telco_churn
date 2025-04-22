@@ -1,0 +1,346 @@
+---
+title: "Logistic Regression in R"
+author: "Professor J. Dittenber"
+date: "2025-04-22"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+
+df <- read.csv("C:/Users/Nitro 5/telco_churn/notebook/telco_churn_data.csv")
+
+```
+
+# Introduction 
+
+Stepwise logistic regression is a method used to automatically select a subset of predictors that best explain the variation in a binary outcome.
+
+It works by adding or removing predictors one at a time based on a criterion like AIC (Akaike Information Criterion). The goal is to balance model fit and complexity.
+
+### Understanding the AIC (Akaike Information Criterion)
+
+**Formula:**
+
+AIC = –2 * log-likelihood + 2 * k
+
+Where:
+- **log-likelihood** measures how well the model fits the data.
+- **k** is the number of estimated parameters in the model (including the intercept).
+
+**Explanation:**
+
+AIC is a metric used to compare models by balancing **model fit** and **model complexity**. 
+
+- The first term (–2 * log-likelihood) rewards models that fit the data well.
+- The second term (2 * k) penalizes models that are too complex (i.e., those with more predictors).
+
+**Lower AIC values indicate better models**. During stepwise regression, AIC helps determine whether adding or removing a variable improves the model.
+
+Unlike accuracy metrics, AIC can be used even when models are not nested and is especially helpful for variable selection.
+
+
+
+Forward selection starts with no predictors and adds the most helpful ones.
+
+Backward elimination starts with all predictors and removes the least helpful.
+
+Stepwise does both—adds and removes as needed.
+
+This helps us identify the most informative predictors without overfitting the model with unnecessary variables.
+
+# Task 1: Prepare the Data 
+
+Read in the data and display the first 6 rows
+
+```{r}
+set.seed(123)
+head(df)
+```
+
+Create a summary of the data to ensure the variables are stored correctly.
+
+```{r}
+summary(df)
+```
+
+We need to convert character variables to factors: 
+
+```{r}
+# install library(dplyr)
+df <- df |> 
+  mutate(across(where(is.character), as.factor))
+
+summary(df)
+```
+
+Churn is the target variable and it also a factor. We will set class 0 as the baseline: 
+
+```{r}
+df$Churn <- relevel(df$Churn, ref = 'No')
+
+head(df)
+summary(df)
+```
+
+Now, we will drop the Customer ID column and omit any missing values 
+
+```{r}
+df <- df |> select(-customerID)
+df <- na.omit(df)
+```
+
+# Task 2: The Full Model
+
+To begin the stepwise logistic regression process, we define two models:
+
+- A null model that includes only the intercept (no predictors), representing the baseline churn rate.
+
+- A full model that includes all available predictors.
+
+These models set the boundaries for the stepwise algorithm to search for the best subset of variables by comparing improvements in model fit.
+
+```{r}
+# Null model (intercept only)
+null_model <- glm(Churn ~ 1, data = df, family = binomial)
+
+# Full model (the . tells R to include all predictors)
+full_model <- glm(Churn ~ ., data = df, family = binomial)
+
+```
+
+
+We can view the summaries of each model before we start the step-wise regression: 
+
+```{r}
+summary(null_model)
+
+summary(full_model)
+```
+
+## Full Model Summary (Interpretation and Notes)
+The full logistic regression model includes all available predictors to estimate the probability of customer churn. Many of these predictors are categorical, and R automatically creates dummy variables to represent their levels (thanks R). For example:
+
+- genderMale represents the comparison between male customers and the reference group (female).
+
+- InternetServiceFiber optic compares customers with fiber optic service to those in the reference level ("DSL" or "No").
+
+- Binary variables such as SeniorCitizen are included directly as numeric predictors.
+
+An example interpretation: the coefficient for `SeniorCitizen` is approximately 0.217. This indicates that, holding all other variables constant, being a senior citizen is associated with an increase in the **log-odds** of churn. The associated p-value is 0.0103, suggesting the relationship is statistically significant at the 5% level.
+
+After exponentiating,  $e^{0.217} \approx 1.24$, meaning the **odds** of churn for senior citizens are 1.24 times the odds for non-senior customers.This translates to a **24% increase in the odds of churn**, not a 124% increase, because:$\text{Percent increase in odds} = (1.24 - 1) \times 100 = 24\%$ So, senior citizens are estimated to be **24% more likely to churn** than non-seniors, in terms of odds.
+
+Some coefficients are listed as NA, which indicates that R identified perfect multicollinearity or redundant levels in the model. These variables were automatically removed during fitting due to linear dependence.
+
+**What if One Level of a Categorical Variable Is Significant but Another Is Not?**
+
+This is a common and important situation in regression modeling. Suppose you have a categorical variable like `Contract` with three levels:
+
+- Month-to-month (reference level)
+- One year
+- Two year
+
+Your regression output might show:
+
+| Predictor         | Coefficient | p-value |
+|------------------|-------------|---------|
+| ContractOne year | –0.50       | 0.08    |
+| ContractTwo year | –1.20       | 0.001   |
+
+**How to Interpret This:**
+
+- Significance is **relative to the reference level**. Here, both "One year" and "Two year" contracts are being compared to "Month-to-month".
+- The model suggests that **"Two year" contracts significantly reduce churn**, while the effect of "One year" contracts is not statistically significant at the $5\%$ level.
+- This does **not mean** that "One year" contracts have no effect — only that their effect is not strong enough to rule out chance based on the current data.
+
+---
+
+**What to do?**
+
+**Option A: Keep All Levels**  
+- This is usually the best choice unless you have a specific reason to simplify.
+- Retains the full structure of the categorical variable.
+
+**Option B: Collapse Categories**  
+- If two levels behave similarly, you can recode them into one (e.g., group "One year" and "Two year" into "Long-term contract").
+- Simplifies the model and may make effects more detectable.
+
+**Option C: Use Regularization (like LASSO)**  
+- With many categories or sparse data, regularization will shrink less useful coefficients (possibly to zero).
+- Allows the model to decide which levels are worth keeping.
+
+---
+
+**Summary**
+
+Even if only one level of a categorical variable is statistically significant, the variable as a whole may still be useful. Do **not drop the entire variable** just because some levels are not significant — this can remove meaningful structure and information from your model.
+
+
+Finally, note the AIC value reported for the full model. In the next step, the stepwise procedure will attempt to reduce this AIC by selectively adding or removing predictors to improve model parsimony and performance.
+
+# Task 3: StepWise Regression - Backward Elimination 
+
+This function starts with the full model and at each step:
+
+- Evaluates the effect of removing each predictor,
+
+- Chooses the removal that most reduces AIC (or increases it the least),
+
+- Stops when removing any further predictor would increase AIC.
+
+```{r}
+#we will use the option trace = 1 so that we can see each step
+# if you do not want to see it, set trace = 0
+backward_model <- step(full_model, direction = "backward", trace = 1)
+
+```
+
+
+The final model, stored in the backward_model object, is the result of applying backward elimination to the full logistic regression model. Starting with all available predictors, the algorithm iteratively removed variables that did not contribute meaningfully to model performance, as judged by the Akaike Information Criterion (AIC).
+
+The predictors retained in this model are those that collectively provide the best balance between model fit and complexity. Each retained variable significantly improves the model’s ability to predict customer churn relative to a simpler model without it.
+
+This model is more parsimonious than the full model, avoids overfitting, and includes only those predictors that help explain variation in the outcome variable.
+
+You can now interpret the coefficients, assess model performance, or use it for prediction and model evaluation.
+
+```{r}
+summary(backward_model)
+formula(backward_model)
+```
+
+
+## Final Logistic Regression Model (Interpretation)
+
+The model predicts the probability that a customer churns based on a refined set of predictors selected through backward elimination. The model has removed redundant or non-informative variables, as evidenced by the note that 4 coefficients were not defined due to singularities (indicating multicollinearity or perfect separation among categories).
+
+
+### Key Observations
+
+#### 1. Model Fit
+- Null deviance: 8143.4 (model with intercept only)
+- Residual deviance: 5827.8 (after fitting predictors)
+- AIC: 5867.8
+
+This significant drop in deviance and AIC suggests that the final model provides a much better fit than the null model.
+
+---
+
+#### 2. Significant Predictors (p < 0.05)
+Here are some key variables that are statistically significant and likely important for churn prediction:
+
+- **SeniorCitizen**: Being a senior citizen increases the odds of churn (p = 0.0099)
+- **tenure**: Longer tenure is associated with lower odds of churn (p < 2e-16)
+- **InternetServiceFiber optic**: Customers with fiber optic service are more likely to churn (p = 7.32e-07)
+- **InternetServiceNo**: Customers with no internet service are less likely to churn (p = 3.7e-06)
+- **OnlineSecurityYes**: Having online security decreases churn odds (p = 0.0043)
+- **TechSupportYes**: Having tech support decreases churn odds (p = 0.0128)
+- **StreamingTVYes**, **StreamingMoviesYes**: Usage of streaming services is associated with higher churn
+- **ContractTwo year**: Having a two-year contract is strongly associated with lower churn (p < 2e-16)
+- **PaperlessBillingYes**: Associated with increased churn (p = 4.64e-06)
+- **MonthlyCharges**, **TotalCharges**: Both significant, with total charges having a strong effect (p = 3.29e-06)
+
+---
+
+#### 3. Non-significant Predictors (p > 0.05)
+- MultipleLinesNo phone service
+- PhoneServiceYes
+- PaymentMethodCredit card (automatic)
+- PaymentMethodMailed check
+
+These were retained likely because their removal did not improve the AIC, but their individual effects are not statistically significant.
+
+---
+
+### Summary
+The final model:
+
+- Includes relevant service usage and account features (e.g., streaming services, contract type, internet type)
+- Captures behavioral and financial patterns (e.g., billing type, total charges)
+- Reflects known business patterns (e.g., customers on longer contracts churn less)
+
+This model is now ready for evaluation using prediction metrics or for comparison against models in Python with L1/L2 regularization.
+
+
+# Task 4:
+
+
+Comparing Logistic Regression Models Across R and Python
+
+Your task is to compare the **logistic regression model created in R using backward elimination** with logistic regression models built in **Python** using the `scikit-learn` library. You will:
+
+1. **Recreate a logistic regression model in Python** using the same predictors selected in your final R model or by choosing predictors using Python and methods discussed in class.
+2. **Train two regularized models in Python**:
+   - One using **Lasso (L1 penalty)**
+   - One using **Ridge (L2 penalty)**
+3. **Use cross-validation** to determine the optimal value of the regularization parameter (`C` in `LogisticRegression`, or `alpha` in `LogisticRegressionCV`).
+4. **Evaluate and compare** the models based on classification performance (e.g., accuracy, precision, recall, ROC AUC).
+5. **Interpret and report** which model performs best and why. Discuss how regularization affects model complexity and variable selection.
+
+You may use tools such as:
+- `LogisticRegressionCV` for automatic hyperparameter tuning,
+- `Pipeline` and `StandardScaler` to scale your features (especially important for regularized models),
+- `classification_report` and `roc_auc_score` for performance metrics.
+
+This task assesses your ability to apply statistical modeling techniques, evaluate models across platforms, and interpret regularization in practice.
+
+
+# Task 5: 
+
+Addressing Class Imbalance
+
+In this dataset, the `Churn` variable is imbalanced, meaning that the majority of customers do not churn. This can bias the logistic regression model and lead to misleading performance metrics.
+
+Your task is to:
+
+1. **Balance the training data** using random oversampling of the minority class.
+2. **Re-run the modeling process**:
+   - Fit the full model
+   - Perform backward elimination
+   - Evaluate the final model
+
+3. **Compare the results**:
+   - Do you observe the same set of predictors in the final model?
+   - Are the coefficient signs or significance levels different?
+   - Does the AIC improve or worsen?
+   - How does the model’s performance change?
+
+---
+
+You can use the following R code to oversample the minority class:
+
+```{r, eval = FALSE}
+# Install if necessary
+install.packages("ROSE")  # Or use "DMwR" for SMOTE
+
+library(ROSE)
+
+# Create a balanced dataset using random oversampling
+balanced_df <- ovun.sample(Churn ~ ., data = df, method = "over", seed = 123)$data
+
+# Proceed with the same modeling steps on balanced_df:
+# - full_model <- glm(..., data = balanced_df, ...)
+# - backward_model <- step(...)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
