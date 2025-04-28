@@ -128,7 +128,7 @@ def load_numpy_array_data(file_path: str) -> np.array:
 
 ########################################################################################
 
-def save_objects(file_path: str, obj: object) -> None:
+def save_object(file_path: str, obj: object) -> None:
     """
     Saves a Python object (like a model or tool) to a file.
 
