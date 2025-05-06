@@ -61,7 +61,7 @@ class TelcoData:
         """
         try:
             
-            telco_input_dict = self.get_usvisa_data_as_dict()
+            telco_input_dict = self.get_telco_data_as_dict()
             return DataFrame(telco_input_dict)
         
         except Exception as e:

@@ -14,7 +14,7 @@ from telco_churn.entity.artifact_entity import DataIngestionArtifact, DataTransf
 
 from telco_churn.exceptions import custom_exception
 from telco_churn.logger import logging
-from telco_churn.utils import save_object, save_numpy_array_data, read_yaml_file, drop_columns 
+from telco_churn.utils.main_utils import save_object, save_numpy_array_data, read_yaml_file, drop_columns 
 from telco_churn.entity.estimator import TargetValueMapping 
 
 class DataTransformation:

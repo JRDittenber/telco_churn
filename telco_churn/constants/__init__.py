@@ -1,5 +1,5 @@
 import os 
-from datetime import data 
+from datetime import date 
 
 DATABASE_NAME = "TELCO_CHURN"
 
