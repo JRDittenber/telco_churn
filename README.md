@@ -126,3 +126,6 @@ This project is licensed under the MIT License.
 For any questions or collaboration requests, feel free to reach out:
 - **Email**: [jeff.dittenber@hotmail.com](mailto:jeff.dittenber@hotmail.com)
 - **LinkedIn**: [linkedin.com/in/passionformath](https://www.linkedin.com/in/passionformath/)
+
+# Acknowledgements
+This project is based on the end-to-end deployment project created by Bappy Ahmed. Special thanks for making this available under the MIT License.
