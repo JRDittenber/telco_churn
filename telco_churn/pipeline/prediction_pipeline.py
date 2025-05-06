@@ -1,110 +1,133 @@
-import os 
-import sys 
+import os
+import sys
+
+import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-
-from telco_churn.entity.config_entity import DataIngestionConfig
-from telco_churn.entity.artifact_entity import DataIngestionArtifact
-
+from telco_churn.entity.config_entity import TelcoPredictorConfig
+from telco_churn.entity.s3_estimator import TelcoEstimator
 from telco_churn.exceptions import custom_exception
 from telco_churn.logger import logging
+from telco_churn.utils.main_utils import read_yaml_file
+from pandas import DataFrame
 
-from telco_churn.database_access.db_extract import TelcoData
 
 
-class DataIngestion:
-    def __init__(self, data_ingestion_config: DataIngestionConfig = DataIngestionConfig()):
+
+class TelcoData:
+    def __init__(self,
+                SeniorCitizen,
+                Dependents,
+                tenure,
+                MultipleLines,
+                InternetService,
+                OnlineSecurity,
+                TechSupport,
+                StreamingTV,
+                StreamingMovies,
+                Contract,
+                PaperlessBilling,
+                PaymentMethod,
+                MonthlyCharges, 
+                TotalCharges
+                ):
         """
-        :param data_ingestion_config: Configuration for data ingestion.
-        
+        Telco Data constructor
+        Input: all features of the trained model for prediction
         """
         try:
-            self.data_ingestion_config = data_ingestion_config
-        except Exception as e:
-            raise custom_exception(e, sys)
+            self.SeniorCitizen = SeniorCitizen
+            self.Dependents = Dependents
+            self.tenure = tenure
+            self.MultipleLines = MultipleLines
+            self.InternetService = InternetService
+            self.OnlineSecurity = OnlineSecurity
+            self.TechSupport = TechSupport
+            self.StreamingTV = StreamingTV
+            self.StreamingMovies = StreamingMovies
+            self.Contract = Contract
+            self.PaperlessBilling = PaperlessBilling
+            self.PaymentMethod = PaymentMethod
+            self.MonthlyCharges = MonthlyCharges
+            self.TotalCharges = TotalCharges
 
 
-    def export_data_into_feature_store(self) -> pd.DataFrame:
-        """
-        Description: This method exports data from MongoDB to a csv file.
-
-        output: data is returned as artifact of a data ingestion component
-        on failure: write an exception log and then raise a custom exception
-        """
-        try: 
-            logging.info("Exporting data from MongoDB.")
-            telco_data = TelcoData()
-            dataframe = telco_data.export_collection_to_dataframe(collection_name=self.data_ingestion_config.collection_name)
-            logging.info(f"Shape of dataframe: {dataframe.shape}")
-            feature_store_file_path = self.data_ingestion_config.feature_store_file_path
-            dir_path = os.path.dirname(feature_store_file_path)
-            os.makedirs(dir_path, exist_ok=True)
-            logging.info(f"Saving exported data into feature store at {feature_store_file_path}.")
-            dataframe.to_csv(feature_store_file_path, index=False, header=True)
-            return dataframe
-        except Exception as e:
-            raise custom_exception(e, sys)
-        
-
-    def split_data_as_train_test(self, dataframe: pd.DataFrame) -> None:
-        """
-        Description: split the dataframe into train and test based on split ratio
-
-        output: Folder created in s3 bucket with train and test data
-        on failure: write an exception log and then raise a custom exception
-        """
-        logging.info("Entering the split_data_as_train_test method of Data_Ingestion class.")
-
-        try:
-            if dataframe.empty:
-                raise ValueError("The DataFrame is empty. Please check the data loading process.")
-
-            train_set, test_set = train_test_split(dataframe, test_size=self.data_ingestion_config.train_test_split_ratio)
-            logging.info(f'Performed the train test split with ratio: {self.data_ingestion_config.train_test_split_ratio}')
-            logging.info(f"Train set shape: {train_set.shape}")
-            logging.info(f"Test set shape: {test_set.shape}")
-            logging.ingo("Exiting the split_data_as_train_test method of Data_Ingestion class.")
-
-            dir_path = os.path.dirname(self.data_ingestion_config.training_file_path)
-            os.makedirs(dir_path, exist_ok=True)
-
-            logging.info(f"Exporting train and test data to {self.data_ingestion_config.training_file_path} and {self.data_ingestion_config.testing_file_path}.")
-            train_set.to_csv(self.data_ingestion_config.training_file_path, index=False, header=True)
-            test_set.to_csv(self.data_ingestion_config.testing_file_path, index=False, header=True)
-            
-            logging.info(f"Train and test data exported successfully to {self.data_ingestion_config.training_file_path} and {self.data_ingestion_config.testing_file_path}.")
 
         except Exception as e:
             raise custom_exception(e, sys) from e
-        
 
-        def initiate_data_ingestion(self) -> DataIngestionArtifact:
-            """
-            Description: This method initiates the data ingestion process.
-
-            output: train set and test set are returned as artifact of a data ingestion component
-            on failure: write an exception log and then raise a custom exception
-            """
-            logging.info("Entering the initiate_data_ingestion method of Data_Ingestion class.")
-           
-           try:
-            dataframe = self.export_data_into_feature_store()
-            logging.info("Got the data from MonogDB")
-
-            if dataframe.empty:
-                raise ValueError("The DataFrame is empty. Please check the data loading process.")
+    def get_telco_input_data_frame(self)-> DataFrame:
+        """
+        This function returns a DataFrame from TelcoData class input
+        """
+        try:
             
-            self.split_data_as_train_test(dataframe)
-            logging.info("Split the data into train and test sets.")
+            telco_input_dict = self.get_usvisa_data_as_dict()
+            return DataFrame(telco_input_dict)
+        
+        except Exception as e:
+            raise custom_exception(e, sys) from e
 
-            logging.info("Exiting the initiate_data_ingestion method of Data_Ingestion class.")
 
-            data_ingestion_artifact = DataIngestionArtifact(
-                trained_file_path=self.data_ingestion_config.training_file_path,
-                testing_file_path=self.data_ingestion_config.testing_file_path,
+    def get_telco_data_as_dict(self):
+        """
+        This function returns a dictionary from USvisaData class input 
+        """
+        logging.info("Entered get_usvisa_data_as_dict method as USvisaData class")
+
+        try:
+            input_data = {
+                "SeniorCitizen": [self.SeniorCitizen],
+                "Dependents": [self.Dependents],
+                "tenure": [self.tenure],
+                "MultipleLines": [self.MultipleLines],
+                "InternetService": [self.InternetService],
+                "OnlineSecurity": [self.OnlineSecurity],
+                "TechSupport": [self.TechSupport],
+                "StreamingTV": [self.StreamingTV],
+                "StreamingMovies": [self.StreamingMovies],
+                "Contract": [self.Contract],
+                "PaperlessBilling": [self.PaperlessBilling],
+                "PaymentMethod": [self.PaymentMethod],
+                "MonthlyCharges": [self.MonthlyCharges],
+                "TotalCharges": [self.TotalCharges],
+            }
+
+            logging.info("Created telco data dict")
+
+            logging.info("Exited get_telco_data_as_dict method as TelcoData class")
+
+            return input_data
+
+        except Exception as e:
+            raise custom_exception(e, sys) from e
+
+
+
+class TelcoClassifier:
+    def __init__(self,prediction_pipeline_config: TelcoPredictorConfig = TelcoPredictorConfig(),) -> None:
+        """
+        :param prediction_pipeline_config: Configuration for prediction the value
+        """
+        try:
+            # self.schema_config = read_yaml_file(SCHEMA_FILE_PATH)
+            self.prediction_pipeline_config = prediction_pipeline_config
+        except Exception as e:
+            raise custom_exception(e, sys)
+
+    def predict(self, dataframe) -> str:
+        """
+        This is the method of USvisaClassifier
+        Returns: Prediction in string format
+        """
+        try:
+            logging.info("Entered predict method of USvisaClassifier class")
+            model = TelcoEstimator(
+                bucket_name=self.prediction_pipeline_config.model_bucket_name,
+                model_path=self.prediction_pipeline_config.model_file_path,
             )
-            logging.info(f"Data ingestion artifact created: {data_ingestion_artifact}.")
-            return data_ingestion_artifact
-        except Exception as e:
-            raise custom_exception(e, sys) from e
+            result =  model.predict(dataframe)
             
+            return result
+        
+        except Exception as e:
+            raise custom_exception(e, sys)
